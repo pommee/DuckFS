@@ -72,18 +72,18 @@ pub fn list_files(fs_path: &str) -> std::io::Result<Vec<Directory>> {
             let mut files = Vec::new();
             if let Ok(sub_paths) = fs::read_dir(&dir_path) {
                 for sub_entry in sub_paths.flatten() {
-                    if let Ok(sub_meta) = sub_entry.metadata() {
-                        if sub_meta.is_file() {
-                            let file_name = sub_entry.file_name().to_string_lossy().to_string();
-                            files.push(File {
-                                name: file_name,
-                                size: sub_meta.len(),
-                                is_readonly: sub_meta.permissions().readonly(),
-                                created: system_time_to_epoch(&sub_meta.created().ok()),
-                                modified: system_time_to_epoch(&sub_meta.modified().ok()),
-                                accessed: system_time_to_epoch(&sub_meta.accessed().ok()),
-                            });
-                        }
+                    if let Ok(sub_meta) = sub_entry.metadata()
+                        && sub_meta.is_file()
+                    {
+                        let file_name = sub_entry.file_name().to_string_lossy().to_string();
+                        files.push(File {
+                            name: file_name,
+                            size: sub_meta.len(),
+                            is_readonly: sub_meta.permissions().readonly(),
+                            created: system_time_to_epoch(&sub_meta.created().ok()),
+                            modified: system_time_to_epoch(&sub_meta.modified().ok()),
+                            accessed: system_time_to_epoch(&sub_meta.accessed().ok()),
+                        });
                     }
                 }
             }

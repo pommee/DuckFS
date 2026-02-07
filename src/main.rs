@@ -1,14 +1,26 @@
-mod fs;
+pub mod fs;
 use std::{collections::HashMap, time::Instant};
 
-use axum::{Router, extract::Query, http::StatusCode, response::Json, routing::get};
+use axum::{
+    Json, Router,
+    body::Body,
+    extract::Query,
+    http::{StatusCode, Uri, header},
+    response::{IntoResponse, Response},
+    routing::get,
+};
+use rust_embed::Embed;
 use serde_json::{Value, json};
+
+#[derive(Embed)]
+#[folder = "dashboard/dist/"]
+struct Asset;
 
 #[tokio::main]
 async fn main() {
     let app = Router::new()
-        .route("/", get(root))
-        .route("/json", get(json));
+        .route("/api/fs", get(root))
+        .fallback(get(spa_handler));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     axum::serve(listener, app).await.unwrap();
@@ -25,6 +37,26 @@ async fn root(Query(params): Query<HashMap<String, String>>) -> Result<Json<Valu
     Ok(Json(json!({ "data": files })))
 }
 
-async fn json() -> Json<Value> {
-    Json(json!({ "data": 42 }))
+async fn spa_handler(uri: Uri) -> impl IntoResponse {
+    let path = uri.path().trim_start_matches('/');
+
+    if let Some(content) = Asset::get(path) {
+        let mime = mime_guess::from_path(path).first_or_octet_stream();
+        let res = Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, mime.as_ref())
+            .body(Body::from(content.data.to_vec()))
+            .unwrap();
+
+        return res;
+    }
+
+    match Asset::get("index.html") {
+        Some(content) => axum::response::Html(content.data.to_vec()).into_response(),
+        None => (
+            StatusCode::NOT_FOUND,
+            "Not found - even index.html is missing".to_string(),
+        )
+            .into_response(),
+    }
 }
