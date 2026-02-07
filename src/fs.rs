@@ -1,109 +1,93 @@
 use serde::Serialize;
 use std::fs;
+use std::fs::{DirEntry, Metadata};
+use std::io;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Serialize)]
 pub struct Directory {
-    parent: PathBuf,
-    name: String,
+    path: PathBuf,
     files: Vec<File>,
+    subdirectories: Vec<String>,
 }
 
 #[derive(Serialize)]
 pub struct File {
     name: String,
     size: u64,
-    is_readonly: bool,
+    readonly: bool,
     created: Option<u64>,
     modified: Option<u64>,
     accessed: Option<u64>,
 }
 
-pub fn list_files(fs_path: &str) -> std::io::Result<Vec<Directory>> {
-    let full_path = Path::new("/").join(fs_path);
-    println!("Listing files under path {}", full_path.display());
+pub fn list_files(start_path: &str, max_depth: u32) -> io::Result<Vec<Directory>> {
+    let root = Path::new("/").join(start_path);
+    let root = fs::canonicalize(&root)?;
 
-    let mut directories = Vec::new();
-    let paths = fs::read_dir(&full_path)?;
-    let mut direct_files = Vec::new();
+    println!(
+        "Listing files under path {} (max depth: {})",
+        root.display(),
+        max_depth
+    );
 
-    for entry in paths {
-        let entry = entry?;
-        let metadata = entry.metadata()?;
-
-        if metadata.is_file() {
-            let file_name = entry.file_name().to_string_lossy().to_string();
-            direct_files.push(File {
-                name: file_name,
-                size: metadata.len(),
-                is_readonly: metadata.permissions().readonly(),
-                created: system_time_to_epoch(&metadata.created().ok()),
-                modified: system_time_to_epoch(&metadata.modified().ok()),
-                accessed: system_time_to_epoch(&metadata.accessed().ok()),
-            });
-        }
-    }
-
-    // If there are files at this level, add them as a directory entry
-    if !direct_files.is_empty() {
-        let name = full_path
-            .file_name()
-            .map(|n| n.to_string_lossy().to_string())
-            .unwrap_or_else(|| ".".to_string());
-
-        directories.push(Directory {
-            parent: full_path.parent().unwrap_or(Path::new("/")).to_path_buf(),
-            name,
-            files: direct_files,
-        });
-    }
-
-    // Process subdirectories
-    let paths = fs::read_dir(&full_path)?;
-    for entry in paths {
-        let entry = entry?;
-        let metadata = entry.metadata()?;
-
-        if metadata.is_dir() {
-            let name = entry.file_name().to_string_lossy().to_string();
-            let dir_path = entry.path();
-
-            let mut files = Vec::new();
-            if let Ok(sub_paths) = fs::read_dir(&dir_path) {
-                for sub_entry in sub_paths.flatten() {
-                    if let Ok(sub_meta) = sub_entry.metadata()
-                        && sub_meta.is_file()
-                    {
-                        let file_name = sub_entry.file_name().to_string_lossy().to_string();
-                        files.push(File {
-                            name: file_name,
-                            size: sub_meta.len(),
-                            is_readonly: sub_meta.permissions().readonly(),
-                            created: system_time_to_epoch(&sub_meta.created().ok()),
-                            modified: system_time_to_epoch(&sub_meta.modified().ok()),
-                            accessed: system_time_to_epoch(&sub_meta.accessed().ok()),
-                        });
-                    }
-                }
-            }
-
-            let directory = Directory {
-                parent: full_path.clone(),
-                name,
-                files,
-            };
-            directories.push(directory);
-        }
-    }
-
-    Ok(directories)
+    let mut result = Vec::new();
+    visit_dir(&root, 0, max_depth, &mut result)?;
+    Ok(result)
 }
 
-fn system_time_to_epoch(time: &Option<SystemTime>) -> Option<u64> {
-    time.and_then(|t| {
-        t.duration_since(SystemTime::UNIX_EPOCH)
-            .ok()
-            .map(|d| d.as_secs())
-    })
+fn visit_dir(
+    dir: &Path,
+    current_depth: u32,
+    max_depth: u32,
+    collector: &mut Vec<Directory>,
+) -> io::Result<()> {
+    let mut files = Vec::new();
+    let mut subdir_names = Vec::new();
+    let mut subdir_paths_to_recurse = Vec::new();
+
+    for entry in fs::read_dir(dir)? {
+        let entry: DirEntry = entry?;
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let meta = entry.metadata()?;
+
+        if meta.is_file() {
+            files.push(metadata_to_file(&name, &meta));
+        } else if meta.is_dir() {
+            subdir_names.push(name);
+            if current_depth < max_depth {
+                subdir_paths_to_recurse.push(path);
+            }
+        }
+    }
+
+    collector.push(Directory {
+        path: dir.to_path_buf(),
+        files,
+        subdirectories: subdir_names,
+    });
+
+    // Only recurse if max depth not reached
+    for sub_path in subdir_paths_to_recurse {
+        visit_dir(&sub_path, current_depth + 1, max_depth, collector)?;
+    }
+
+    Ok(())
+}
+
+fn metadata_to_file(name: &str, meta: &Metadata) -> File {
+    File {
+        name: name.to_string(),
+        size: meta.len(),
+        readonly: meta.permissions().readonly(),
+        created: system_time_to_epoch(meta.created().ok()),
+        modified: system_time_to_epoch(meta.modified().ok()),
+        accessed: system_time_to_epoch(meta.accessed().ok()),
+    }
+}
+
+fn system_time_to_epoch(time: Option<SystemTime>) -> Option<u64> {
+    time.and_then(|t| t.duration_since(UNIX_EPOCH).ok().map(|d| d.as_secs()))
 }

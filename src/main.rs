@@ -19,18 +19,22 @@ struct Asset;
 #[tokio::main]
 async fn main() {
     let app = Router::new()
-        .route("/api/fs", get(root))
+        .route("/api/fs", get(get_fs))
         .fallback(get(spa_handler));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn root(Query(params): Query<HashMap<String, String>>) -> Result<Json<Value>, StatusCode> {
+async fn get_fs(Query(params): Query<HashMap<String, String>>) -> Result<Json<Value>, StatusCode> {
     let fs_path = params.get("path").ok_or(StatusCode::BAD_REQUEST)?;
+    let fs_depth = params
+        .get("depth")
+        .and_then(|d| d.parse::<u32>().ok())
+        .unwrap_or(0);
 
     let now = Instant::now();
-    let files = fs::list_files(fs_path).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let files = fs::list_files(fs_path, fs_depth).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let elapsed = now.elapsed();
 
     println!("Took: {:?}", elapsed);
