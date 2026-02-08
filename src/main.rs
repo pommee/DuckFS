@@ -1,5 +1,5 @@
 pub mod fs;
-use std::{collections::HashMap, time::Instant};
+use std::{collections::HashMap, path::Path, time::Instant};
 
 use axum::{
     Json, Router,
@@ -7,9 +7,10 @@ use axum::{
     extract::Query,
     http::{StatusCode, Uri, header},
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{get, post},
 };
 use rust_embed::Embed;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tower_http::{
     compression::CompressionLayer,
@@ -22,6 +23,19 @@ use crate::fs::ListResult;
 #[folder = "dashboard/dist/"]
 struct Asset;
 
+#[derive(Deserialize)]
+struct SaveFileRequest {
+    path: String,
+    content: String,
+}
+
+#[derive(Serialize)]
+struct SaveFileResponse {
+    success: bool,
+    message: String,
+    path: String,
+}
+
 #[tokio::main]
 async fn main() {
     let cors = CorsLayer::new()
@@ -31,6 +45,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/fs", get(get_fs))
+        .route("/api/save", post(save_file_handler))
         .fallback(get(spa_handler))
         .layer(CompressionLayer::new())
         .layer(cors);
@@ -40,15 +55,12 @@ async fn main() {
 }
 
 async fn get_fs(Query(params): Query<HashMap<String, String>>) -> (StatusCode, Json<Value>) {
+    let now = Instant::now();
     let fs_path = params.get("path").map(|s| s.as_str()).unwrap_or("");
     let fs_depth = params
         .get("depth")
         .and_then(|d| d.parse::<u32>().ok())
         .unwrap_or(0);
-
-    println!("API request: path='{}', depth={}", fs_path, fs_depth);
-
-    let now = Instant::now();
 
     let result = match fs::list_files(fs_path, fs_depth) {
         Ok(res) => res,
@@ -70,6 +82,46 @@ async fn get_fs(Query(params): Query<HashMap<String, String>>) -> (StatusCode, J
     };
 
     (StatusCode::OK, Json(json!({ "data": data })))
+}
+
+async fn save_file_handler(
+    Json(request): Json<SaveFileRequest>,
+) -> Result<Json<SaveFileResponse>, (StatusCode, String)> {
+    println!("Save file request received for: {}", request.path);
+
+    if request.path.contains("..") {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Invalid path: '..' is not allowed".to_string(),
+        ));
+    }
+    let full_path = Path::new(&request.path);
+    if let Some(parent) = full_path.parent() {
+        if !parent.exists() {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                format!("Parent directory does not exist: {:?}", parent),
+            ));
+        }
+    }
+
+    match tokio::fs::write(&full_path, &request.content).await {
+        Ok(_) => {
+            println!("File saved successfully: {}", request.path);
+            Ok(Json(SaveFileResponse {
+                success: true,
+                message: "File saved successfully".to_string(),
+                path: request.path,
+            }))
+        }
+        Err(e) => {
+            eprintln!("Failed to save file {}: {:?}", request.path, e);
+            Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to save file: {}", e),
+            ))
+        }
+    }
 }
 
 async fn spa_handler(uri: Uri) -> impl IntoResponse {

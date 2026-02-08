@@ -16,9 +16,36 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { PostRequest } from "@/util";
+import { toast } from "sonner";
 
 const PATH_STORAGE_KEY = "file-browser-current-path";
 const DEPTH_STORAGE_KEY = "file-browser-depth";
+
+const saveFileContent = async (
+  path: string,
+  content: string
+): Promise<void> => {
+  try {
+    const [code, response] = await PostRequest("save", {
+      path: path,
+      content: content
+    });
+
+    if (code !== 200) {
+      toast.error(
+        "Failed to save file: " + (response.error || "Unknown error"),
+        { id: "save-file-error" }
+      );
+      throw new Error(response.error || "Failed to save file");
+    }
+
+    toast.success("File saved successfully", { id: "save-file-success" });
+  } catch (error) {
+    toast.success("Save file error: " + error);
+    throw error;
+  }
+};
 
 export default function FileBrowser() {
   const [currentPath, setCurrentPath] = useState(() => {
@@ -90,6 +117,12 @@ export default function FileBrowser() {
     }
   };
 
+  const handleSaveFile = async (content: string, filePath: string) => {
+    await saveFileContent("/" + filePath, content);
+    const refreshedContent = await fetchFileContent(filePath);
+    setFileContent(refreshedContent);
+  };
+
   return (
     <div className="h-screen flex flex-col p-2">
       {error && <div className="text-red-600 mb-4">{error}</div>}
@@ -146,11 +179,13 @@ export default function FileBrowser() {
           <FileContent
             file={selectedFile}
             content={fileContent}
+            setContent={setFileContent}
             loading={loadingContent}
             onClose={() => {
               setSelectedFile(null);
               setFileContent(null);
             }}
+            onSave={handleSaveFile}
           />
         </div>
       </div>
