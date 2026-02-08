@@ -11,7 +11,10 @@ use axum::{
 };
 use rust_embed::Embed;
 use serde_json::{Value, json};
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::{
+    compression::CompressionLayer,
+    cors::{Any, CorsLayer},
+};
 
 use crate::fs::ListResult;
 
@@ -29,6 +32,7 @@ async fn main() {
     let app = Router::new()
         .route("/api/fs", get(get_fs))
         .fallback(get(spa_handler))
+        .layer(CompressionLayer::new())
         .layer(cors);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
