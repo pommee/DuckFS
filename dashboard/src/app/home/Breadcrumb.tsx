@@ -15,8 +15,12 @@ interface BreadcrumbNavProps {
 }
 
 export function BreadcrumbNav({ currentPath, onNavigate }: BreadcrumbNavProps) {
-  const pathSegments = currentPath ? currentPath.split("/") : [];
+  const pathSegments = currentPath
+    ? currentPath.split("/").filter(Boolean)
+    : [];
+
   const breadcrumb = [
+    { name: "/", path: "" },
     ...pathSegments.map((seg, i) => ({
       name: seg,
       path: pathSegments.slice(0, i + 1).join("/")
@@ -30,10 +34,10 @@ export function BreadcrumbNav({ currentPath, onNavigate }: BreadcrumbNavProps) {
           const isLast = index === breadcrumb.length - 1;
 
           return (
-            <BreadcrumbItem key={crumb.path}>
+            <BreadcrumbItem key={crumb.path || "root"}>
               {isLast ? (
                 <BreadcrumbPage className="font-bold">
-                  {crumb.name || "root"}
+                  {crumb.name}
                 </BreadcrumbPage>
               ) : (
                 <>
@@ -41,7 +45,7 @@ export function BreadcrumbNav({ currentPath, onNavigate }: BreadcrumbNavProps) {
                     className="cursor-pointer"
                     onClick={() => onNavigate(crumb.path)}
                   >
-                    {crumb.name || "root"}
+                    {crumb.name}
                   </BreadcrumbLink>
                   <BreadcrumbSeparator />
                 </>
