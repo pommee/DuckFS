@@ -114,7 +114,7 @@ export const CodeBlock = memo(function CodeBlock({
   return (
     <div
       className={cn(
-        "relative group/codeblock my-6 rounded-xl border border-border overflow-hidden bg-zinc-950 min-h-0 h-full flex flex-col",
+        "relative group/codeblock rounded-xl border border-border overflow-hidden bg-zinc-950 min-h-0 h-full flex flex-col",
         className
       )}
     >

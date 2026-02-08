@@ -28,7 +28,7 @@ export function BreadcrumbNav({ currentPath, onNavigate }: BreadcrumbNavProps) {
   ];
 
   return (
-    <Breadcrumb className="mb-6">
+    <Breadcrumb>
       <BreadcrumbList>
         {breadcrumb.map((crumb, index) => {
           const isLast = index === breadcrumb.length - 1;

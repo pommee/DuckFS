@@ -8,8 +8,17 @@ import { FileContent } from "@/app/home/FileContent";
 import { File } from "@/types";
 import { Separator } from "@/components/ui/separator";
 import { BreadcrumbNav } from "@/app/home/Breadcrumb";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const PATH_STORAGE_KEY = "file-browser-current-path";
+const DEPTH_STORAGE_KEY = "file-browser-depth";
 
 export default function FileBrowser() {
   const [currentPath, setCurrentPath] = useState(() => {
@@ -17,6 +26,12 @@ export default function FileBrowser() {
       return localStorage.getItem(PATH_STORAGE_KEY) || "";
     }
     return "";
+  });
+  const [depth, setDepth] = useState(() => {
+    if (typeof window !== "undefined") {
+      return parseInt(localStorage.getItem(DEPTH_STORAGE_KEY) || "1", 10);
+    }
+    return 1;
   });
   const [data, setData] = useState<File[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,23 +46,32 @@ export default function FileBrowser() {
     }
   }, [currentPath]);
 
-  const loadDirectory = useCallback(async (path: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const items = await fetchDirectory(path);
-      setData(items);
-    } catch {
-      setError("Failed to load directory");
-      setData([]);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(DEPTH_STORAGE_KEY, depth.toString());
     }
-  }, []);
+  }, [depth]);
+
+  const loadDirectory = useCallback(
+    async (path: string, depthValue: number) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const items = await fetchDirectory(path, depthValue);
+        setData(items);
+      } catch {
+        setError("Failed to load directory");
+        setData([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    loadDirectory(currentPath);
-  }, [currentPath, loadDirectory]);
+    loadDirectory(currentPath, depth);
+  }, [currentPath, depth, loadDirectory]);
 
   const handleFileClick = async (file: File) => {
     if (!file.path) return;
@@ -72,33 +96,53 @@ export default function FileBrowser() {
 
       <div className="flex-1 flex gap-4 min-h-0">
         <div className="w-1/2 flex flex-col min-h-0">
-          <BreadcrumbNav
-            currentPath={currentPath}
-            onNavigate={setCurrentPath}
-          />
-
-          <div className="flex-1 overflow-auto">
-            {loading ? (
-              <DataTable columns={columns()} data={data} />
-            ) : (
-              <DataTable
-                columns={columns()}
-                data={data}
-                onRowClick={(item) => {
-                  if (item.type === "directory") {
-                    setCurrentPath(item.path);
-                  } else {
-                    handleFileClick(item);
-                  }
-                }}
-              />
-            )}
+          <div className="flex items-center justify-between w-full mb-2">
+            <BreadcrumbNav
+              currentPath={currentPath}
+              onNavigate={setCurrentPath}
+            />
+            <div className="flex items-center gap-2">
+              <Label htmlFor="depth-select" className="text-sm">
+                Depth:
+              </Label>
+              <Select
+                value={depth.toString()}
+                onValueChange={(value) => setDepth(parseInt(value, 10))}
+              >
+                <SelectTrigger id="depth-select" className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="4">4</SelectItem>
+                  <SelectItem value="5">5</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          {loading ? (
+            <DataTable columns={columns()} data={data} />
+          ) : (
+            <DataTable
+              columns={columns()}
+              data={data}
+              onRowClick={(item) => {
+                if (item.type === "directory") {
+                  setCurrentPath(item.path);
+                } else {
+                  handleFileClick(item);
+                }
+              }}
+            />
+          )}
         </div>
 
         <Separator orientation="vertical" className="self-center bg-muted/50" />
 
-        <div className="w-1/2 flex flex-col min-h-0">
+        <div className="w-1/2 flex flex-col">
           <FileContent
             file={selectedFile}
             content={fileContent}

@@ -3,27 +3,30 @@ import { GetRequest } from "@/util";
 
 const FS_ROOT = "/";
 
-function buildApiPath(currentPath: string): string {
+function buildApiPath(currentPath: string, depth: number): string {
   const clean = currentPath.replace(/^\/+|\/+$/g, "");
   const root = FS_ROOT.replace(/^\/+|\/+$/g, "");
 
   const full = root ? `${root}${clean ? "/" + clean : ""}` : clean;
-  return `fs?path=${full}&depth=1`;
+  return `fs?path=${full}&depth=${depth}`;
 }
 
-export async function fetchDirectory(path: string): Promise<File[]> {
-  const [code, response] = await GetRequest(buildApiPath(path));
+export async function fetchDirectory(
+  path: string,
+  depth: number
+): Promise<File[]> {
+  const [code, response] = await GetRequest(buildApiPath(path, depth));
 
   if (code !== 200 || !response?.data) return [];
 
   const apiItems = response.data.Directories as ApiItem[];
 
   const normalizedTarget = path
-    ? `${FS_ROOT}/${path}`.replace(/^\/+/, "")
-    : FS_ROOT.replace(/^\/+/, "");
+    ? `${FS_ROOT}/${path}`.replace(/^\/+/, "/")
+    : FS_ROOT.replace(/^\/+/, "/");
 
   const currentItem = apiItems.find((item) => {
-    const normalized = item.path.replace(/^\/+/, "");
+    const normalized = item.path.replace(/^\/+/, "/");
     return normalized === normalizedTarget;
   });
 
@@ -32,12 +35,14 @@ export async function fetchDirectory(path: string): Promise<File[]> {
   const rows: File[] = [];
 
   for (const subName of currentItem.subdirectories) {
-    const subPath = path ? `${path}/${subName}` : subName;
+    const expectedPath = currentItem.path.endsWith("/")
+      ? `${currentItem.path}${subName}`
+      : `${currentItem.path}/${subName}`;
 
-    const subEntry = apiItems.find((item) => item.path.endsWith(`/${subName}`));
-
+    const subEntry = apiItems.find((item) => item.path === expectedPath);
     const fileCount = subEntry?.files.length ?? 0;
     const dirCount = subEntry?.subdirectories.length ?? 0;
+    const subPath = path ? `${path}/${subName}` : subName;
 
     rows.push({
       name: subName,

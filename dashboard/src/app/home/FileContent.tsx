@@ -49,7 +49,7 @@ function getHighlightLanguage(filename: string): string {
 export function FileContent({ file, content, loading }: FileContentProps) {
   if (!file) {
     return (
-      <CodeBlock className="max-h-[95vh] min-h-[95vh]">
+      <CodeBlock className="max-h-[99vh] min-h-[99vh]">
         {"No file loaded"}
       </CodeBlock>
     );
@@ -68,14 +68,14 @@ export function FileContent({ file, content, loading }: FileContentProps) {
         </div>
       ) : content ? (
         <div className="flex-1 overflow-auto">
-          <CodeBlock language={language} className="max-h-[95vh] min-h-[95vh]">
+          <CodeBlock language={language} className="max-h-[99vh] min-h-[99vh]">
             {content}
           </CodeBlock>
         </div>
       ) : (
         <CodeBlock
           language={language}
-          className="max-h-[95vh] min-h-[95vh] text-red-500"
+          className="max-h-[99vh] min-h-[99vh] text-red-500"
         >
           {"Could not load file content"}
         </CodeBlock>
