@@ -6,5 +6,6 @@ release:         ; @cargo build --release
 run:             ; @cargo run
 check:           ; @cargo check
 lint:            ; @cargo clippy --all-targets --all-features -- -D warnings
+format:		     ; @cargo fmt --all --check && pnpm -C dashboard lint
 test:            ; @cargo test
 dev-website:     ; @pnpm -C dashboard install && pnpm -C dashboard dev

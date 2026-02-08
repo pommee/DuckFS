@@ -1,31 +1,99 @@
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import { FileIcon, FolderIcon } from "@phosphor-icons/react";
 import { ColumnDef } from "@tanstack/react-table";
+import { MoreHorizontal } from "lucide-react";
 
-export type Directory = {
-  path: string;
-  files: File[];
-  subdirectories: Directory[];
-};
-
-export type File = {
-  name: string;
-  size: number;
-  readonly: boolean;
-  created: Date;
-  modified: Date;
-  accessed: Date;
-};
-
-export const columns: ColumnDef<File>[] = [
+export const columns = (): ColumnDef<File>[] => [
   {
     accessorKey: "name",
-    header: "Name"
+    header: "Name",
+    cell: ({ row }) => {
+      return row.original.type === "directory" ? (
+        <div className="flex">
+          <FolderIcon
+            weight="fill"
+            className="h-4 w-4 mt-0.5 mr-2 text-orange-500"
+          />
+          <div className="font-medium">{row.original.name}</div>
+        </div>
+      ) : (
+        <div className="flex">
+          <FileIcon className="h-4 w-4 mt-0.5 mr-2" />
+          <div className="font-medium">{row.original.name}</div>
+        </div>
+      );
+    }
   },
   {
     accessorKey: "size",
-    header: "Size"
+    header: "Size",
+    cell: ({ row }) =>
+      row.original.size != null
+        ? formatBytes(row.original.size)
+        : `${row.original.items ?? 0} items`
   },
   {
     accessorKey: "modified",
-    header: "Modified"
+    header: "Modified",
+    cell: ({ row }) =>
+      row.original.modified?.toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      })
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => {
+      const dirOrFile =
+        row.original.type === "directory" ? "directory" : "file";
+
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => navigator.clipboard.writeText(row.original.id)}
+            >
+              {`Delete ${dirOrFile}`}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>{`Download ${dirOrFile}`}</DropdownMenuItem>
+            <DropdownMenuItem>{`Details for ${dirOrFile}`}</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
   }
 ];
+
+function formatBytes(bytes: number) {
+  const thresh = 1024;
+  if (bytes < thresh) return bytes + " B";
+  const units = thresh
+    ? ["kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
+    : ["KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"];
+  let u = -1;
+  do {
+    bytes /= thresh;
+    ++u;
+  } while (bytes >= thresh);
+  return bytes.toFixed(1) + " " + units[u];
+}

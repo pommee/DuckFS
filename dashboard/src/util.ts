@@ -49,8 +49,7 @@ export async function PostRequest(
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(bodyData),
-      credentials: "include"
+      body: JSON.stringify(bodyData)
     });
 
     const tryParseJson = async () => {
@@ -84,9 +83,7 @@ export async function PostRequest(
 
 export async function GetRequest(url: string, ignoreError?: boolean) {
   try {
-    const res = await fetch(`${getApiBaseUrl()}/api/${url}`, {
-      credentials: "include"
-    });
+    const res = await fetch(`${getApiBaseUrl()}/api/${url}`);
 
     if (!res.ok) {
       await isAuthenticated(res);
@@ -114,8 +111,7 @@ export async function GetRequest(url: string, ignoreError?: boolean) {
 async function PatchRequest(url: string, ignoreError?: boolean) {
   try {
     const res = await fetch(`${getApiBaseUrl()}/api/${url}`, {
-      method: "PATCH",
-      credentials: "include"
+      method: "PATCH"
     });
 
     if (!res.ok) {
@@ -151,8 +147,7 @@ export async function PutRequest(
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(bodyData),
-      credentials: "include"
+      body: JSON.stringify(bodyData)
     });
 
     if (!res.ok) {
@@ -185,7 +180,6 @@ export async function DeleteRequest(
   try {
     const res = await fetch(`${getApiBaseUrl()}/api/${url}`, {
       method: "DELETE",
-      credentials: "include",
       body: JSON.stringify(body)
     });
 

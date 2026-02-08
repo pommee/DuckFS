@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Route, Routes, useLocation } from "react-router-dom";
 import Layout from "../app/layout";
 import { FileXIcon } from "@phosphor-icons/react";
-import Home from "./home";
+import FileBrowser from "./home";
 
 function NotFound() {
   return (
@@ -29,8 +29,8 @@ function App() {
     <>
       <Routes location={location} key={location.pathname}>
         <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/home" element={<Home />} />
+          <Route path="/" element={<FileBrowser />} />
+          <Route path="/home" element={<FileBrowser />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

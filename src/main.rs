@@ -11,6 +11,9 @@ use axum::{
 };
 use rust_embed::Embed;
 use serde_json::{Value, json};
+use tower_http::cors::{Any, CorsLayer};
+
+use crate::fs::ListResult;
 
 #[derive(Embed)]
 #[folder = "dashboard/dist/"]
@@ -18,27 +21,51 @@ struct Asset;
 
 #[tokio::main]
 async fn main() {
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     let app = Router::new()
         .route("/api/fs", get(get_fs))
-        .fallback(get(spa_handler));
+        .fallback(get(spa_handler))
+        .layer(cors);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn get_fs(Query(params): Query<HashMap<String, String>>) -> Result<Json<Value>, StatusCode> {
-    let fs_path = params.get("path").ok_or(StatusCode::BAD_REQUEST)?;
+async fn get_fs(Query(params): Query<HashMap<String, String>>) -> (StatusCode, Json<Value>) {
+    let fs_path = params.get("path").map(|s| s.as_str()).unwrap_or("");
     let fs_depth = params
         .get("depth")
         .and_then(|d| d.parse::<u32>().ok())
         .unwrap_or(0);
 
-    let now = Instant::now();
-    let files = fs::list_files(fs_path, fs_depth).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let elapsed = now.elapsed();
+    println!("API request: path='{}', depth={}", fs_path, fs_depth);
 
-    println!("Took: {:?}", elapsed);
-    Ok(Json(json!({ "data": files })))
+    let now = Instant::now();
+
+    let result = match fs::list_files(fs_path, fs_depth) {
+        Ok(res) => res,
+        Err(e) => {
+            eprintln!("list_files error for path='{}': {:?}", fs_path, e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            );
+        }
+    };
+
+    let elapsed = now.elapsed();
+    println!("Request completed in {:?}", elapsed);
+
+    let data = match result {
+        ListResult::Directories(dirs) => json!({ "Directories": dirs }),
+        ListResult::FileContents(contents) => json!({ "FileContents": contents }),
+    };
+
+    (StatusCode::OK, Json(json!({ "data": data })))
 }
 
 async fn spa_handler(uri: Uri) -> impl IntoResponse {
