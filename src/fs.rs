@@ -89,6 +89,7 @@ pub fn list_files(start_path: &str, max_depth: u32) -> io::Result<ListResult> {
 
     let mut collector = Vec::new();
     visit_dir(&canonical_root, 0, effective_max_depth, &mut collector)?;
+    collector.sort_by(|a, b| a.path.cmp(&b.path));
 
     Ok(ListResult::Directories(collector))
 }
@@ -125,6 +126,9 @@ fn visit_dir(
             }
         }
     }
+
+    files.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    subdir_names.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
 
     collector.push(Directory {
         path: dir.to_path_buf(),
