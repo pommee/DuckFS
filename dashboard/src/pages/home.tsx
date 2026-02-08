@@ -9,14 +9,27 @@ import { File } from "@/types";
 import { Separator } from "@/components/ui/separator";
 import { BreadcrumbNav } from "@/app/home/Breadcrumb";
 
+const PATH_STORAGE_KEY = "file-browser-current-path";
+
 export default function FileBrowser() {
-  const [currentPath, setCurrentPath] = useState("");
+  const [currentPath, setCurrentPath] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(PATH_STORAGE_KEY) || "";
+    }
+    return "";
+  });
   const [data, setData] = useState<File[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [loadingContent, setLoadingContent] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(PATH_STORAGE_KEY, currentPath);
+    }
+  }, [currentPath]);
 
   const loadDirectory = useCallback(async (path: string) => {
     setLoading(true);
@@ -66,7 +79,7 @@ export default function FileBrowser() {
 
           <div className="flex-1 overflow-auto">
             {loading ? (
-              <div>Loading...</div>
+              <DataTable columns={columns()} data={data} />
             ) : (
               <DataTable
                 columns={columns()}
