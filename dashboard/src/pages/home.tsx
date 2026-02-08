@@ -162,7 +162,12 @@ export default function FileBrowser() {
             <DataTable
               columns={columns()}
               data={data}
+              selectedRowId={selectedFile?.path}
               onRowClick={(item) => {
+                if (selectedFile?.path === item.path) {
+                  return;
+                }
+
                 if (item.type === "directory") {
                   setCurrentPath(item.path);
                 } else {
