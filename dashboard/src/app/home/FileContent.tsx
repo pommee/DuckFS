@@ -14,7 +14,8 @@ import {
   CopyIcon,
   CheckIcon,
   FloppyDiskIcon,
-  XIcon
+  XIcon,
+  FileIcon
 } from "@phosphor-icons/react";
 import Editor from "react-simple-code-editor";
 import { useState } from "react";
@@ -93,9 +94,9 @@ export function FileContent({
 
   if (!file) {
     return (
-      <div className="h-full overflow-auto">
-        <div className="p-4 text-center text-muted-foreground">
-          No file selected
+      <div className="h-full flex items-center justify-center overflow-auto">
+        <div className="flex p-1 text-muted-foreground underline">
+          <FileIcon className="mt-1 mr-2" /> Click on a file to view its content
         </div>
       </div>
     );
@@ -106,7 +107,7 @@ export function FileContent({
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between border-b py-2 px-4">
+      <div className="flex items-center justify-between px-2 py-1 mb-2 bg-muted/50 rounded-sm">
         <div className="flex items-center gap-2">
           <div className="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
             {fileExtension}

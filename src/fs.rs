@@ -8,18 +8,18 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[derive(Serialize)]
 pub struct Directory {
     path: PathBuf,
-    files: Vec<File>,
-    subdirectories: Vec<String>,
+    pub files: Vec<File>,
+    pub subdirectories: Vec<String>,
 }
 
 #[derive(Serialize)]
 pub struct File {
-    name: String,
-    size: u64,
-    readonly: bool,
-    created: Option<u64>,
-    modified: Option<u64>,
-    accessed: Option<u64>,
+    pub name: String,
+    pub size: u64,
+    pub readonly: bool,
+    pub created: Option<u64>,
+    pub modified: Option<u64>,
+    pub accessed: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -128,7 +128,7 @@ fn visit_dir(
     }
 
     files.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-    subdir_names.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+    subdir_names.sort_by_key(|name| name.to_lowercase());
 
     collector.push(Directory {
         path: dir.to_path_buf(),
@@ -145,7 +145,7 @@ fn visit_dir(
     Ok(())
 }
 
-fn metadata_to_file(name: &str, meta: &Metadata) -> File {
+pub fn metadata_to_file(name: &str, meta: &Metadata) -> File {
     File {
         name: name.to_string(),
         size: meta.len(),

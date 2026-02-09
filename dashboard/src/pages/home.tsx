@@ -61,7 +61,6 @@ export default function FileBrowser() {
     return 1;
   });
   const [data, setData] = useState<File[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
@@ -81,7 +80,6 @@ export default function FileBrowser() {
 
   const loadDirectory = useCallback(
     async (path: string, depthValue: number) => {
-      setLoading(true);
       setError(null);
       try {
         const items = await fetchDirectory(path, depthValue);
@@ -89,8 +87,6 @@ export default function FileBrowser() {
       } catch {
         setError("Failed to load directory");
         setData([]);
-      } finally {
-        setLoading(false);
       }
     },
     []
@@ -156,26 +152,22 @@ export default function FileBrowser() {
             </div>
           </div>
 
-          {loading ? (
-            <DataTable columns={columns()} data={data} />
-          ) : (
-            <DataTable
-              columns={columns()}
-              data={data}
-              selectedRowId={selectedFile?.path}
-              onRowClick={(item) => {
-                if (selectedFile?.path === item.path) {
-                  return;
-                }
+          <DataTable
+            columns={columns()}
+            data={data}
+            selectedRowId={selectedFile?.path}
+            onRowClick={(item) => {
+              if (selectedFile?.path === item.path) {
+                return;
+              }
 
-                if (item.type === "directory") {
-                  setCurrentPath(item.path);
-                } else {
-                  handleFileClick(item);
-                }
-              }}
-            />
-          )}
+              if (item.type === "directory") {
+                setCurrentPath(item.path);
+              } else {
+                handleFileClick(item);
+              }
+            }}
+          />
         </div>
 
         <Separator orientation="vertical" className="self-center bg-muted/50" />

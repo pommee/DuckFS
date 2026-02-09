@@ -96,13 +96,13 @@ async fn save_file_handler(
         ));
     }
     let full_path = Path::new(&request.path);
-    if let Some(parent) = full_path.parent() {
-        if !parent.exists() {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                format!("Parent directory does not exist: {:?}", parent),
-            ));
-        }
+    if let Some(parent) = full_path.parent()
+        && !parent.exists()
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            format!("Parent directory does not exist: {:?}", parent),
+        ));
     }
 
     match tokio::fs::write(&full_path, &request.content).await {

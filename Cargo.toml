@@ -11,3 +11,9 @@ serde = { version = "1.0.228", features = [ "derive" ] }
 serde_json = "1.0.149"
 tokio = { version = "1.49.0", features = [ "fs", "macros", "rt-multi-thread" ] }
 tower-http = { version = "0.6.8", features = [ "compression-full", "cors" ] }
+
+[dev-dependencies]
+tempfile = "3.24.0"
+
+[lib]
+path = "src/fs.rs"
