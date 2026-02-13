@@ -22,6 +22,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface FileContentProps {
   file: File | null;
@@ -197,19 +198,21 @@ export function FileContent({
         </div>
       ) : (
         <div className="flex-1 overflow-auto">
-          <Editor
-            value={content || ""}
-            onValueChange={setContent}
-            highlight={(code) => highlight(code, language)}
-            style={{
-              fontFamily: '"Fira Code", "Fira Mono", monospace',
-              fontSize: fontSize,
-              lineHeight: "1.6",
-              minHeight: "100%",
-              backgroundColor: "transparent"
-            }}
-            className="focus:outline-none"
-          />
+          <ScrollArea type="always" className="h-full">
+            <Editor
+              value={content || ""}
+              onValueChange={setContent}
+              highlight={(code) => highlight(code, language)}
+              style={{
+                fontFamily: '"Fira Code", "Fira Mono", monospace',
+                fontSize: fontSize,
+                lineHeight: "1.6",
+                minHeight: "100%",
+                backgroundColor: "transparent"
+              }}
+              className="focus:outline-none"
+            />
+          </ScrollArea>
         </div>
       )}
     </div>

@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { UploadIcon } from "@phosphor-icons/react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const PATH_STORAGE_KEY = "file-browser-current-path";
 const DEPTH_STORAGE_KEY = "file-browser-depth";
@@ -289,22 +290,24 @@ export default function FileBrowser() {
             </div>
           </div>
 
-          <DataTable
-            columns={columns()}
-            data={data}
-            selectedRowId={selectedFile?.path}
-            onRowClick={(item) => {
-              if (selectedFile?.path === item.path) {
-                return;
-              }
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ScrollArea type="always" className="h-full">
+              <DataTable
+                columns={columns()}
+                data={data}
+                selectedRowId={selectedFile?.path}
+                onRowClick={(item) => {
+                  if (selectedFile?.path === item.path) return;
 
-              if (item.type === "directory") {
-                setCurrentPath(item.path);
-              } else {
-                handleFileClick(item);
-              }
-            }}
-          />
+                  if (item.type === "directory") {
+                    setCurrentPath(item.path);
+                  } else {
+                    handleFileClick(item);
+                  }
+                }}
+              />
+            </ScrollArea>
+          </div>
         </div>
 
         <Separator orientation="vertical" className="self-center bg-muted/50" />
