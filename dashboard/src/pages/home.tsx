@@ -27,7 +27,6 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { UploadIcon } from "@phosphor-icons/react";
 
 const PATH_STORAGE_KEY = "file-browser-current-path";
@@ -311,20 +310,11 @@ export default function FileBrowser() {
         <Separator orientation="vertical" className="self-center bg-muted/50" />
 
         <div className="flex flex-col w-1/2">
-          <div className="flex gap-2 mb-2">
-            <Label>Font size: </Label>
-            <Input
-              value={fontSize}
-              onChange={(e) => setFontSize(Number(e.target.value))}
-              type="number"
-              className="max-w-32 border-0 border-b-2 rounded-none border-muted-foreground"
-            />
-          </div>
-
           <FileContent
             file={selectedFile}
             content={fileContent}
             fontSize={fontSize}
+            setFontSize={setFontSize}
             setContent={setFileContent}
             loading={loadingContent}
             onClose={() => {

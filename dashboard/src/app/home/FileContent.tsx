@@ -20,11 +20,14 @@ import {
 import Editor from "react-simple-code-editor";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 interface FileContentProps {
   file: File | null;
   content: string | null;
   fontSize: number;
+  setFontSize: (size: number) => void;
   setContent: (content: string) => void;
   loading: boolean;
   onClose: () => void;
@@ -53,6 +56,7 @@ export function FileContent({
   file,
   content,
   fontSize,
+  setFontSize,
   setContent,
   loading,
   onClose,
@@ -109,6 +113,16 @@ export function FileContent({
 
   return (
     <div className="h-full flex flex-col">
+      <div className="flex gap-2 mb-2">
+        <Label>Font size: </Label>
+        <Input
+          value={fontSize}
+          onChange={(e) => setFontSize(Number(e.target.value))}
+          type="number"
+          className="max-w-32 border-0 border-b-2 rounded-none border-muted-foreground"
+        />
+      </div>
+
       <div className="flex items-center justify-between px-2 py-1 mb-2 bg-muted/50 rounded-sm">
         <div className="flex items-center gap-2">
           <div className="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded">
