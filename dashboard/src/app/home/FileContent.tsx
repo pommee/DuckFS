@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 interface FileContentProps {
   file: File | null;
   content: string | null;
+  fontSize: number;
   setContent: (content: string) => void;
   loading: boolean;
   onClose: () => void;
@@ -51,6 +52,7 @@ function getLanguage(filename: string) {
 export function FileContent({
   file,
   content,
+  fontSize,
   setContent,
   loading,
   onClose,
@@ -185,10 +187,9 @@ export function FileContent({
             value={content || ""}
             onValueChange={setContent}
             highlight={(code) => highlight(code, language)}
-            padding={16}
             style={{
               fontFamily: '"Fira Code", "Fira Mono", monospace',
-              fontSize: 12,
+              fontSize: fontSize,
               lineHeight: "1.6",
               minHeight: "100%",
               backgroundColor: "transparent"

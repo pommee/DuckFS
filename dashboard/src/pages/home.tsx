@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { DataTable } from "@/app/files/table";
-import { columns } from "@/app/files/columns";
+import { columns, formatBytes } from "@/app/files/columns";
 import { fetchDirectory, fetchFileContent } from "@/app/home/api";
 import { FileContent } from "@/app/home/FileContent";
 import { File } from "@/types";
@@ -18,6 +18,17 @@ import {
 import { Label } from "@/components/ui/label";
 import { PostRequest } from "@/util";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { UploadIcon } from "@phosphor-icons/react";
 
 const PATH_STORAGE_KEY = "file-browser-current-path";
 const DEPTH_STORAGE_KEY = "file-browser-depth";
@@ -42,7 +53,35 @@ const saveFileContent = async (
 
     toast.success("File saved successfully", { id: "save-file-success" });
   } catch (error) {
-    toast.success("Save file error: " + error);
+    toast.error("Save file error: " + error);
+    throw error;
+  }
+};
+
+const uploadFile = async (
+  file: globalThis.File,
+  targetPath: string
+): Promise<void> => {
+  try {
+    const content = await file.text();
+    const fullPath = targetPath ? `${targetPath}/${file.name}` : file.name;
+
+    const [code, response] = await PostRequest("save", {
+      path: "/" + fullPath,
+      content: content
+    });
+
+    if (code !== 200) {
+      toast.error(
+        "Failed to upload file: " + (response.error || "Unknown error"),
+        { id: "upload-file-error" }
+      );
+      throw new Error(response.error || "Failed to upload file");
+    }
+
+    toast.success("File uploaded successfully", { id: "upload-file-success" });
+  } catch (error) {
+    toast.error("Upload file error: " + error);
     throw error;
   }
 };
@@ -65,6 +104,17 @@ export default function FileBrowser() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [loadingContent, setLoadingContent] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [pendingFile, setPendingFile] = useState<globalThis.File | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [fontSize, setFontSize] = useState<number>(() => {
+    if (typeof window === "undefined") return 12;
+    return Number(localStorage.getItem("editor-fontSize")) || 12;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("editor-fontSize", String(fontSize));
+  }, [fontSize]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -119,9 +169,97 @@ export default function FileBrowser() {
     setFileContent(refreshedContent);
   };
 
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      setPendingFile(file);
+      setUploadModalOpen(true);
+    }
+  }, []);
+
+  const handleUploadConfirm = async () => {
+    if (!pendingFile) return;
+
+    try {
+      await uploadFile(pendingFile, currentPath);
+      await loadDirectory(currentPath, depth);
+    } catch (error) {
+      console.error("Upload failed:", error);
+    } finally {
+      setUploadModalOpen(false);
+      setPendingFile(null);
+    }
+  };
+
+  const handleUploadCancel = () => {
+    setUploadModalOpen(false);
+    setPendingFile(null);
+  };
+
   return (
-    <div className="h-screen flex flex-col p-2">
+    <div
+      className="h-screen flex flex-col p-2"
+      onDragEnter={handleDrag}
+      onDragLeave={handleDrag}
+      onDragOver={handleDrag}
+      onDrop={handleDrop}
+    >
       {error && <div className="text-red-600 mb-4">{error}</div>}
+
+      {dragActive && (
+        <div className="fixed inset-0 z-50 backdrop-blur-xs flex items-center justify-center">
+          <div className="border-2 border-dashed border-primary rounded-lg p-12 bg-card">
+            <div className="flex flex-col items-center gap-4">
+              <UploadIcon size={48} className="text-primary" />
+              <p className="text-xl">Drop file to upload</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload File</DialogTitle>
+            <DialogDescription>
+              <div className="grid grid-cols-[auto_1fr] gap-x-2">
+                <span>Filename:</span>
+                <span className="text-white">{pendingFile?.name}</span>
+
+                <span>Path:</span>
+                <span className="text-white">
+                  {currentPath || "the root directory"}
+                </span>
+
+                <span>Size:</span>
+                <span className="text-white">
+                  {formatBytes(pendingFile?.size)}
+                </span>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleUploadCancel}>
+              Cancel
+            </Button>
+            <Button onClick={handleUploadConfirm}>Upload</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex-1 flex gap-4 min-h-0">
         <div className="w-1/2 flex flex-col min-h-0">
@@ -172,10 +310,21 @@ export default function FileBrowser() {
 
         <Separator orientation="vertical" className="self-center bg-muted/50" />
 
-        <div className="w-1/2 flex flex-col">
+        <div className="flex flex-col w-1/2">
+          <div className="flex gap-2 mb-2">
+            <Label>Font size: </Label>
+            <Input
+              value={fontSize}
+              onChange={(e) => setFontSize(Number(e.target.value))}
+              type="number"
+              className="max-w-32 border-0 border-b-2 rounded-none border-muted-foreground bg-transparent"
+            />
+          </div>
+
           <FileContent
             file={selectedFile}
             content={fileContent}
+            fontSize={fontSize}
             setContent={setFileContent}
             loading={loadingContent}
             onClose={() => {

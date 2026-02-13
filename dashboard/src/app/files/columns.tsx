@@ -84,8 +84,8 @@ export const columns = (): ColumnDef<File>[] => [
   }
 ];
 
-function formatBytes(bytes: number) {
-  const thresh = 1024;
+export function formatBytes(bytes: number) {
+  const thresh = 1000;
   if (bytes < thresh) return bytes + " B";
   const units = thresh
     ? ["kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
