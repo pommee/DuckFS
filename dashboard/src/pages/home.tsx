@@ -317,7 +317,7 @@ export default function FileBrowser() {
               value={fontSize}
               onChange={(e) => setFontSize(Number(e.target.value))}
               type="number"
-              className="max-w-32 border-0 border-b-2 rounded-none border-muted-foreground bg-transparent"
+              className="max-w-32 border-0 border-b-2 rounded-none border-muted-foreground"
             />
           </div>
 

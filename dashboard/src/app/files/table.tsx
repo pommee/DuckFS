@@ -2,6 +2,7 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  RowSelectionState,
   useReactTable
 } from "@tanstack/react-table";
 
@@ -13,12 +14,16 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { useState } from "react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onRowClick?: (row: TData) => void;
   selectedRowId?: string;
+
+  rowSelection: RowSelectionState;
+  setRowSelection: (v: RowSelectionState) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -27,72 +32,84 @@ export function DataTable<TData, TValue>({
   onRowClick,
   selectedRowId
 }: DataTableProps<TData, TValue>) {
+  const [rowSelection, setRowSelection] = useState({});
+
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    enableRowSelection: true,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getRowId: (row, index) => (row as any).path || index.toString()
+    onRowSelectionChange: setRowSelection,
+    state: {
+      rowSelection
+    }
   });
 
   return (
-    <div className="overflow-auto rounded-md border">
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
+    <div>
+      <div className="overflow-auto rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => {
+                const isSelected = selectedRowId === row.id;
                 return (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
+                  <TableRow
+                    className="cursor-pointer"
+                    key={row.id}
+                    data-state={isSelected ? "selected" : undefined}
+                    onClick={() => {
+                      if (onRowClick) {
+                        onRowClick(row.original);
+                      }
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="py-0">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
                         )}
-                  </TableHead>
+                      </TableCell>
+                    ))}
+                  </TableRow>
                 );
-              })}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows?.length ? (
-            table.getRowModel().rows.map((row) => {
-              const isSelected = selectedRowId === row.id;
-              return (
-                <TableRow
-                  className="cursor-pointer"
-                  key={row.id}
-                  data-state={isSelected ? "selected" : undefined}
-                  onClick={() => {
-                    if (onRowClick) {
-                      onRowClick(row.original);
-                    }
-                  }}
+              })
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-0">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              );
-            })
-          ) : (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                No results.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <div className="mt-1 text-muted-foreground flex-1 text-sm">
+        {table.getFilteredSelectedRowModel().rows.length} of{" "}
+        {table.getFilteredRowModel().rows.length} row(s) selected.
+      </div>
     </div>
   );
 }
