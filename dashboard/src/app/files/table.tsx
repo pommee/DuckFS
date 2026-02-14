@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { useEffect } from "react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -22,6 +23,7 @@ interface DataTableProps<TData, TValue> {
   selectedRowId?: string;
   rowSelection: RowSelectionState;
   setRowSelection: (v: RowSelectionState) => void;
+  onSelectionChange?: (selectedRows: TData[]) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -30,18 +32,39 @@ export function DataTable<TData, TValue>({
   onRowClick,
   selectedRowId,
   rowSelection,
-  setRowSelection
+  setRowSelection,
+  onSelectionChange
 }: DataTableProps<TData, TValue>) {
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: (updater) => {
+      const newSelection =
+        typeof updater === "function" ? updater(rowSelection) : updater;
+      setRowSelection(newSelection);
+
+      if (onSelectionChange) {
+        const selectedRows = table
+          .getSelectedRowModel()
+          .rows.map((row) => row.original);
+        onSelectionChange(selectedRows);
+      }
+    },
     state: {
       rowSelection
     }
   });
+
+  useEffect(() => {
+    if (onSelectionChange) {
+      const selectedRows = table
+        .getSelectedRowModel()
+        .rows.map((row) => row.original);
+      onSelectionChange(selectedRows);
+    }
+  }, [rowSelection, table, onSelectionChange]);
 
   return (
     <div>
@@ -103,10 +126,6 @@ export function DataTable<TData, TValue>({
             )}
           </TableBody>
         </Table>
-      </div>
-      <div className="mt-1 text-muted-foreground flex-1 text-sm">
-        {table.getFilteredSelectedRowModel().rows.length} of{" "}
-        {table.getFilteredRowModel().rows.length} row(s) selected.
       </div>
     </div>
   );

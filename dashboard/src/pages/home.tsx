@@ -29,6 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { UploadIcon } from "@phosphor-icons/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SelectedRowsPanel } from "@/app/home/SelectedRowsPanel";
 
 const PATH_STORAGE_KEY = "file-browser-current-path";
 const DEPTH_STORAGE_KEY = "file-browser-depth";
@@ -112,6 +113,7 @@ export default function FileBrowser() {
     return Number(localStorage.getItem("editor-fontSize")) || 12;
   });
   const [rowSelection, setRowSelection] = useState({});
+  const [selectedRows, setSelectedRows] = useState<File[]>([]);
 
   useEffect(() => {
     localStorage.setItem("editor-fontSize", String(fontSize));
@@ -147,8 +149,9 @@ export default function FileBrowser() {
     loadDirectory(currentPath, depth);
   }, [currentPath, depth, loadDirectory]);
 
-  const handleFileClick = async (file: File) => {
+  const handleFileClick = useCallback(async (file: File) => {
     if (!file.path) return;
+
     setSelectedFile(file);
     setLoadingContent(true);
     setFileContent(null);
@@ -162,7 +165,7 @@ export default function FileBrowser() {
     } finally {
       setLoadingContent(false);
     }
-  };
+  }, []);
 
   const handleSaveFile = async (content: string, filePath: string) => {
     await saveFileContent("/" + filePath, content);
@@ -210,6 +213,41 @@ export default function FileBrowser() {
     setUploadModalOpen(false);
     setPendingFile(null);
   };
+
+  const handleSelectionChange = useCallback((selected: File[]) => {
+    setSelectedRows(selected);
+  }, []);
+
+  const handleRemoveSelected = useCallback(
+    (fileToRemove: File) => {
+      const rowIndex = data.findIndex(
+        (item) => item.path === fileToRemove.path
+      );
+      if (rowIndex === -1) return;
+
+      setRowSelection((prev) => {
+        const newSelection = { ...prev };
+        delete newSelection[rowIndex];
+        return newSelection;
+      });
+    },
+    [data]
+  );
+
+  const handleClearAllSelected = useCallback(() => {
+    setRowSelection({});
+  }, []);
+
+  const handleSelectedFileClick = useCallback(
+    (file: File) => {
+      if (file.type === "directory") {
+        setCurrentPath(file.path ?? "/");
+      } else {
+        handleFileClick(file);
+      }
+    },
+    [handleFileClick]
+  );
 
   return (
     <div
@@ -299,9 +337,9 @@ export default function FileBrowser() {
                 selectedRowId={selectedFile?.path}
                 rowSelection={rowSelection}
                 setRowSelection={setRowSelection}
+                onSelectionChange={handleSelectionChange}
                 onRowClick={(item) => {
                   if (selectedFile?.path === item.path) return;
-
                   if (item.type === "directory") {
                     setCurrentPath(item.path ?? "/");
                   } else {
@@ -311,6 +349,12 @@ export default function FileBrowser() {
               />
             </ScrollArea>
           </div>
+          <SelectedRowsPanel
+            selectedRows={selectedRows}
+            onRemove={handleRemoveSelected}
+            onClearAll={handleClearAllSelected}
+            onFileClick={handleSelectedFileClick}
+          />
         </div>
 
         <Separator orientation="vertical" className="self-center bg-muted/50" />
