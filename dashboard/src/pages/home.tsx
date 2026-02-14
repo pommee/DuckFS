@@ -111,6 +111,7 @@ export default function FileBrowser() {
     if (typeof window === "undefined") return 12;
     return Number(localStorage.getItem("editor-fontSize")) || 12;
   });
+  const [rowSelection, setRowSelection] = useState({});
 
   useEffect(() => {
     localStorage.setItem("editor-fontSize", String(fontSize));
@@ -290,17 +291,19 @@ export default function FileBrowser() {
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden border rounded-sm">
             <ScrollArea type="always" className="h-full">
               <DataTable
                 columns={columns()}
                 data={data}
                 selectedRowId={selectedFile?.path}
+                rowSelection={rowSelection}
+                setRowSelection={setRowSelection}
                 onRowClick={(item) => {
                   if (selectedFile?.path === item.path) return;
 
                   if (item.type === "directory") {
-                    setCurrentPath(item.path);
+                    setCurrentPath(item.path ?? "/");
                   } else {
                     handleFileClick(item);
                   }

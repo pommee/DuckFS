@@ -14,14 +14,12 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { useState } from "react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onRowClick?: (row: TData) => void;
   selectedRowId?: string;
-
   rowSelection: RowSelectionState;
   setRowSelection: (v: RowSelectionState) => void;
 }
@@ -30,10 +28,10 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   onRowClick,
-  selectedRowId
+  selectedRowId,
+  rowSelection,
+  setRowSelection
 }: DataTableProps<TData, TValue>) {
-  const [rowSelection, setRowSelection] = useState({});
-
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
@@ -47,7 +45,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div>
-      <div className="overflow-auto rounded-md border">
+      <div className="overflow-auto rounded-md">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
