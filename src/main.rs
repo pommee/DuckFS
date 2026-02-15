@@ -46,6 +46,7 @@ async fn main() {
     let app = Router::new()
         .route("/api/fs", get(get_fs))
         .route("/api/save", post(save_file_handler))
+        .route("/api/download", get(download_file_handler))
         .fallback(get(spa_handler))
         .layer(CompressionLayer::new())
         .layer(cors);
@@ -120,6 +121,49 @@ async fn save_file_handler(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to save file: {}", e),
             ))
+        }
+    }
+}
+
+async fn download_file_handler(
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let path = params.get("path").ok_or_else(|| {
+        (
+            StatusCode::BAD_REQUEST,
+            "Missing path parameter".to_string(),
+        )
+    })?;
+
+    println!("Download file request received for: {}", path);
+
+    if path.contains("..") {
+        return Err((StatusCode::BAD_REQUEST, "Invalid path".to_string()));
+    }
+
+    match tokio::fs::read(path).await {
+        Ok(contents) => {
+            let mime = mime_guess::from_path(path).first_or_octet_stream();
+
+            let filename = Path::new(path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("download")
+                .replace(['/', '\\', '"'], "_");
+
+            Ok(Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, mime.as_ref())
+                .header(
+                    header::CONTENT_DISPOSITION,
+                    format!("attachment; filename=\"{}\"", filename),
+                )
+                .body(Body::from(contents))
+                .unwrap())
+        }
+        Err(e) => {
+            eprintln!("Failed to read file {}: {:?}", path, e);
+            Err((StatusCode::NOT_FOUND, format!("File not found: {}", e)))
         }
     }
 }

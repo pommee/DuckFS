@@ -9,9 +9,33 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { File } from "@/types";
-import { FileIcon, FolderIcon } from "@phosphor-icons/react";
+import {
+  DownloadIcon,
+  EraserIcon,
+  FileIcon,
+  FolderIcon,
+  InfoIcon
+} from "@phosphor-icons/react";
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal } from "lucide-react";
+import { toast } from "sonner";
+
+async function download(path: string) {
+  try {
+    const downloadUrl = `api/download?path=/${encodeURIComponent(path)}`;
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = "";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success("Download started", { id: "download-success" });
+  } catch (error) {
+    toast.error("Download error: " + error);
+    throw error;
+  }
+}
 
 export const columns = (): ColumnDef<File>[] => [
   {
@@ -97,11 +121,16 @@ export const columns = (): ColumnDef<File>[] => [
             <DropdownMenuItem
               onClick={() => navigator.clipboard.writeText(row.original.id)}
             >
-              {`Delete ${dirOrFile}`}
+              <EraserIcon /> {`Delete ${dirOrFile}`}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>{`Download ${dirOrFile}`}</DropdownMenuItem>
-            <DropdownMenuItem>{`Details for ${dirOrFile}`}</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => download(row.original.path)}>
+              <DownloadIcon />
+              {`Download ${dirOrFile}`}
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <InfoIcon /> {`Details for ${dirOrFile}`}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
